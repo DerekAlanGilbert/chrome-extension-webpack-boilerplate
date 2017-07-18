@@ -1,9 +1,12 @@
 var webpack = require("webpack"),
-    path = require("path"),
-    fileSystem = require("fs"),
-    env = require("./utils/env"),
-    HtmlWebpackPlugin = require("html-webpack-plugin"),
-    WriteFilePlugin = require("write-file-webpack-plugin");
+  path = require("path"),
+  fileSystem = require("fs"),
+  env = require("./utils/env"),
+  HtmlWebpackPlugin = require("html-webpack-plugin"),
+  WriteFilePlugin = require("write-file-webpack-plugin");
+
+const ExtractTextPlugin = require("extract-text-webpack-plugin");
+
 
 // load the secrets
 var alias = {};
@@ -16,7 +19,7 @@ if (fileSystem.existsSync(secretsPath)) {
 
 var options = {
   entry: {
-    popup: path.join(__dirname, "src", "js", "popup.js"),
+    popup: path.join(__dirname, "node_modules", "vue-cli-todomvc", "src", "main.js"),
     options: path.join(__dirname, "src", "js", "options.js"),
     background: path.join(__dirname, "src", "js", "background.js")
   },
@@ -26,11 +29,42 @@ var options = {
   },
   module: {
     rules: [
-      { test: /\.css$/, loader: "style-loader!css-loader", exclude: /node_modules/  }
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
+        options: {
+          loaders: {
+            'scss': 'vue-style-loader!css-loader!sass-loader',
+            'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax'
+
+          },
+          extractCSS: true
+        }
+      },
+      {
+        test: /\.js$/,
+        loader: 'babel-loader',
+        exclude: /node_modules/
+      },
+      {
+        test: /\.(png|jpg|gif|svg)$/,
+        loader: 'file-loader',
+        options: {
+          name: '[name].[ext]?[hash]'
+        }
+      },
+      {
+        test: /\.css$/,
+        use: ExtractTextPlugin.extract({
+          fallback: "style-loader",
+          use: "css-loader"
+        })
+      }
     ]
   },
   resolve: {
-    alias: alias
+    alias: alias,
+    extensions: ['.js', '.vue']
   },
   plugins: [
     // expose and write the allowed env vars on the compiled bundle
@@ -52,7 +86,8 @@ var options = {
       filename: "background.html",
       chunks: ["background"]
     }),
-    new WriteFilePlugin()
+    new WriteFilePlugin(),
+    new ExtractTextPlugin("style.css"),
   ]
 };
 
